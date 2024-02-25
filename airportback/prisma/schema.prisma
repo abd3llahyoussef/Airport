@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id            String          @id @default(cuid())
+  passport      String          @unique @db.VarChar(50)
+  password      String          @db.VarChar(255)
+  email         String          @unique @db.VarChar(50)
+  birth         DateTime        @default(now()) @db.Date
+  Fname         String          @db.VarChar(50)
+  Lname         String          @db.VarChar(50)
+  country       String          @db.VarChar(50)
+  state         String          @db.VarChar(50)
+  street        String          @db.VarChar(50)
+  sex           String          @db.VarChar(6)
+  clientServing clientServing[] @relation("UserServe")
+  Booking       Booking[]       @relation("bookTicket")
+  Cancelling    Cancelling[]    @relation("cancelTicket")
+  Payment       Payment[]       @relation("payTicket")
+}
+
+model Employee {
+  SSN           String          @id @default(cuid())
+  firstName     String          @db.VarChar(50)
+  lastName      String          @db.VarChar(50)
+  birth         DateTime        @default(now()) @db.Date
+  phone         BigInt?
+  salary        BigInt
+  supervision   Employee        @relation("supervision", fields: [supervisionId], references: [SSN])
+  supervisionId String
+  workAt        Airport         @relation("working", fields: [workAtId], references: [APId])
+  workAtId      String
+  Employee      Employee[]      @relation("supervision")
+  clientServing clientServing[] @relation("EmpServe")
+}
+
+model clientServing {
+  id     Int      @id @default(autoincrement())
+  Emp    Employee @relation("EmpServe", fields: [EmpId], references: [SSN])
+  EmpId  String
+  user   Client   @relation("UserServe", fields: [UserId], references: [id])
+  UserId String
+}
+
+model Airport {
+  APId           String           @id @default(cuid())
+  APname         String           @db.VarChar(50)
+  APcountry      String           @db.VarChar(50)
+  APstate        String           @db.VarChar(50)
+  Employee       Employee[]       @relation("working")
+  airportContain airportContain[] @relation("airportHave")
+  airportFlights airportFlights[] @relation("airportFlight")
+}
+
+model Airline {
+  ALId           String           @id @default(cuid())
+  ALname         String           @db.VarChar(50)
+  ALcode         String           @db.VarChar(10)
+  airportContain airportContain[] @relation("airlineIn")
+  airlineFlights airlineFlights[] @relation("airlineFlights")
+}
+
+model airportContain {
+  id        Int     @id @default(autoincrement())
+  airport   Airport @relation("airportHave", fields: [airportId], references: [APId])
+  airportId String
+  airline   Airline @relation("airlineIn", fields: [airlineId], references: [ALId])
+  airlineId String
+}
+
+model airlineFlights {
+  flightNumber   Int              @id @default(autoincrement())
+  takeOffTime    DateTime         @default(now()) @db.Time()
+  takeOffDate    DateTime         @default(now()) @db.Date
+  arrivelDate    DateTime         @default(now()) @db.Date
+  cityFrom       String           @db.VarChar(50)
+  cityTo         String           @db.VarChar(50)
+  Duration       Int
+  airline        Airline          @relation("airlineFlights", fields: [airlineId], references: [ALId])
+  airlineId      String
+  airportFlights airportFlights[] @relation("flightIn")
+  flightsType    flightsType[]    @relation("flightTypes")
+  stoppedFlights stoppedFlights[] @relation("stoppedFlight")
+  orderTicket    orderTicket[]    @relation("orderFlight")
+}
+
+model airportFlights {
+  id        Int            @id @default(autoincrement())
+  airport   Airport        @relation("airportFlight", fields: [airportId], references: [APId])
+  airportId String
+  flight    airlineFlights @relation("flightIn", fields: [flightId], references: [flightNumber])
+  flightId  Int
+}
+
+model flightsType {
+  flightType          Int            @id @default(autoincrement())
+  economicSeatsNumber Int
+  businessSeatsNumber Int
+  flight              airlineFlights @relation("flightTypes", fields: [flightId], references: [flightNumber])
+  flightId            Int
+}
+
+model stoppedFlights {
+  id                     Int            @id @default(autoincrement())
+  stopTime               DateTime       @default(now()) @db.Time()
+  stopsNumber            Int
+  duration               Int
+  stoppingAirportName    String         @db.VarChar(50)
+  stoppingAirportCountry String         @db.VarChar(50)
+  flight                 airlineFlights @relation("stoppedFlight", fields: [flightId], references: [flightNumber])
+  flightId               Int
+}
+
+model ticket {
+  ticketNumber String        @id @default(cuid())
+  price        Int
+  travelDate   DateTime      @default(now()) @db.Date
+  orderTicket  orderTicket[] @relation("orderTicket")
+  Booking      Booking[]     @relation("bookTicket")
+  Cancelling   Cancelling[]  @relation("cancelTicket")
+  Payment      Payment[]     @relation("payTicket")
+}
+
+model orderTicket {
+  id         Int            @id @default(autoincrement())
+  class      String         @db.VarChar(20)
+  bagsWeight Int?
+  extraKilos Int?
+  seatNumber String         @db.VarChar(10)
+  ticket     ticket         @relation("orderTicket", fields: [ticketId], references: [ticketNumber])
+  ticketId   String
+  flight     airlineFlights @relation("orderFlight", fields: [flightId], references: [flightNumber])
+  flightId   Int
+}
+
+model Booking {
+  bookingCode String   @id @default(cuid())
+  bookingDate DateTime @default(now()) @db.Date
+  source      String   @db.VarChar(50)
+  destination String   @db.VarChar(50)
+  ticket      ticket   @relation("bookTicket", fields: [ticketId], references: [ticketNumber])
+  ticketId    String
+  user        Client   @relation("bookTicket", fields: [userId], references: [id])
+  userId      String
+}
+
+model Cancelling {
+  cancellationCode String   @id @default(cuid())
+  surcharge        Int
+  cancelDate       DateTime @default(now()) @db.Date
+  ticket           ticket   @relation("cancelTicket", fields: [ticketId], references: [ticketNumber])
+  ticketId         String
+  user             Client   @relation("cancelTicket", fields: [userId], references: [id])
+  userId           String
+}
+
+model Payment {
+  cardNumber Int      @id
+  cardName   String   @db.VarChar(50)
+  Expaire    DateTime @default(now()) @db.Date
+  CCV        Int
+  ticket     ticket   @relation("payTicket", fields: [ticketId], references: [ticketNumber])
+  ticketId   String
+  user       Client   @relation("payTicket", fields: [userId], references: [id])
+  userId     String
+}
